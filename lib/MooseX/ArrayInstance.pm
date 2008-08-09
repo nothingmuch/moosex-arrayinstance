@@ -7,33 +7,34 @@ use Scalar::Util 'weaken', 'blessed';
 
 use Algorithm::VTable;
 
+use Devel::GlobalDestruction;
+
 use namespace::clean -except => 'meta';
 
 extends qw(Moose::Meta::Instance);
 
 our $GLOBAL_VTABLE = Algorithm::VTable->new( vtable_meta_symbol => "first", containers => [ ] );
 
-around new => sub {
-    my ( $next, $class, @args ) = @_;
-
-    my $self = $class->$next(@args);
-    
-    #Carp::confess "constructed $self for " . $self->associated_metaclass->name if
-    #$counts{$self->associated_metaclass->name}++;
-
-    return $self;
-};
+#around new => sub {
+#    my ( $next, $class, @args ) = @_;
+#
+#    my $self = $class->$next(@args);
+#    
+#    Carp::confess "constructed $self for " . $self->associated_metaclass->name if
+#    $counts{$self->associated_metaclass->name}++;
+#
+#    return $self;
+#};
 
 sub DESTROY {
+    return if in_global_destruction;
     my $self = shift;
 
     # class changed, recompute vtables
 
-    if ( my $meta = $self->associated_metaclass ) { # global destruction
-        #$counts{$meta->name};
-        if ( $self->has_global_vtable ) {
-            $GLOBAL_VTABLE = $GLOBAL_VTABLE->remove_classes( $meta->name );
-        }
+    #$counts{$meta->name};
+    if ( $self->has_global_vtable ) {
+        $GLOBAL_VTABLE = $GLOBAL_VTABLE->remove_classes( $self->associated_metaclass->name );
     }
 }
 
@@ -145,7 +146,9 @@ sub weaken_slot_value {
 
 sub inline_create_instance {
     my ($self, $class_variable) = @_;
-    sprintf 'bless([Class::MOP::Class->initialize(%s)->get_meta_instance->vtable], %s)', $class_variable, $class_variable;
+    my $meta_name = $self->associated_metaclass->name;
+
+    sprintf 'bless([ %s eq "%s" ? \@%s::__MOOSE_VTABLE : Class::MOP::Class->initialize(%s)->get_meta_instance->vtable ], %s)', $class_variable, $meta_name, $meta_name, $class_variable, $class_variable;
 }
 
 sub inline_slot_access {

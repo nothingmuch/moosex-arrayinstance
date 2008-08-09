@@ -42,6 +42,10 @@ use ok('MooseX::ArrayInstance');
     __PACKAGE__->meta->make_immutable;
 }
 
+# FIXME force vivification of both
+Point->meta->get_meta_instance->vtable;
+Point3D->meta->get_meta_instance->vtable;
+
 my $point = Point->new(x => 1, y => 2);
 
 isa_ok($point, 'Point');
