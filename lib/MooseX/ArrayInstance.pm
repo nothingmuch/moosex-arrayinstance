@@ -15,6 +15,8 @@ extends qw(Moose::Meta::Instance);
 
 our $GLOBAL_VTABLE = Algorithm::VTable->new( vtable_meta_symbol => "first", containers => [ ] );
 
+sub is_dependent_on_superclasses { 1 }
+
 #around new => sub {
 #    my ( $next, $class, @args ) = @_;
 #
